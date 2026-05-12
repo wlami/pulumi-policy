@@ -45,10 +45,12 @@ class AnalyzerServerTest {
 
   @Test
   void getAnalyzerInfoReportsPackAndPolicies() throws IOException {
+    // Policy-level enforcement level is used directly (MVP: no pack/policy merging).
     PolicyPackArgs args = PolicyPackArgs.builder()
-        .enforcementLevel(EnforcementLevel.MANDATORY)
         .policies(ResourceValidationPolicy.builder()
-            .name("p1").description("desc").validate((a, r) -> {}).build())
+            .name("p1").description("desc")
+            .enforcementLevel(EnforcementLevel.MANDATORY)
+            .validate((a, r) -> {}).build())
         .build();
     start(args, "my-pack");
 

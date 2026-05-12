@@ -44,7 +44,7 @@ public final class AnalyzerServer extends AnalyzerGrpc.AnalyzerImplBase {
       info.addPolicies(PolicyInfo.newBuilder()
           .setName(p.name())
           .setDescription(p.description())
-          .setEnforcementLevel(p.effectiveEnforcementLevel(args.enforcementLevel()).toProto())
+          .setEnforcementLevel(p.enforcementLevel().toProto())
           .build());
     }
     obs.onNext(info.build());
@@ -85,7 +85,7 @@ public final class AnalyzerServer extends AnalyzerGrpc.AnalyzerImplBase {
     PolicyPackArgs packArgs = PolicyRegistry.get().args();
     for (ResourceValidationPolicy p : packArgs.policies()) {
       pulumirpc.AnalyzerOuterClass.EnforcementLevel effectiveLevel =
-          p.effectiveEnforcementLevel(packArgs.enforcementLevel()).toProto();
+          p.enforcementLevel().toProto();
       List<AnalyzeDiagnostic> perPolicy = new ArrayList<>();
       ReportViolation report = (message, urn) -> perPolicy.add(AnalyzeDiagnostic.newBuilder()
           .setPolicyName(p.name())
