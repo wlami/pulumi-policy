@@ -15,6 +15,11 @@ public final class PropertyMarshaller {
   // See sdk/go/common/resource/properties.go (UnknownStringValue, etc.)
   private static final String UNKNOWN_SENTINEL = "04da6b54-80e4-46f7-96ec-b56ff0331ba9";
 
+  // Pulumi's "special-shape" sig key (see sdk/go/common/resource/properties_marshal.go)
+  private static final String SIG_KEY = "4dabf18193072939515e22adb298388d";
+  // Sig value identifying a secret-wrapped value
+  private static final String SECRET_SIG = "1b47061264138c4ac30d75fd1eb44270";
+
   private PropertyMarshaller() {}
 
   public static Map<String, Object> structToMap(Struct s) {
@@ -35,6 +40,27 @@ public final class PropertyMarshaller {
     return Collections.unmodifiableMap(out);
   }
 
+  /**
+   * Converts a nested Struct value, unwrapping secret-shaped structs.
+   * A secret struct has the form:
+   *   { SIG_KEY: SECRET_SIG, "value": <inner> }
+   * This matches the KeepSecrets=false unwrapping the engine would otherwise do.
+   * The top-level property-bag struct is never a secret, so only nested structs
+   * (reached via STRUCT_VALUE in convertValue) use this helper.
+   */
+  private static Object convertStructOrUnwrapSecret(Struct s, Flags flags) {
+    Value sigField = s.getFieldsOrDefault(SIG_KEY, null);
+    if (sigField != null
+        && sigField.getKindCase() == Value.KindCase.STRING_VALUE
+        && SECRET_SIG.equals(sigField.getStringValue())) {
+      Value inner = s.getFieldsOrDefault("value", null);
+      if (inner != null) {
+        return convertValue(inner, flags);
+      }
+    }
+    return convertStruct(s, flags);
+  }
+
   private static Object convertValue(Value v, Flags flags) {
     switch (v.getKindCase()) {
       case NULL_VALUE: return null;
@@ -48,7 +74,7 @@ public final class PropertyMarshaller {
         }
         return s;
       case LIST_VALUE: return convertList(v.getListValue(), flags);
-      case STRUCT_VALUE: return convertStruct(v.getStructValue(), flags);
+      case STRUCT_VALUE: return convertStructOrUnwrapSecret(v.getStructValue(), flags);
       case KIND_NOT_SET:
       default: return null;
     }

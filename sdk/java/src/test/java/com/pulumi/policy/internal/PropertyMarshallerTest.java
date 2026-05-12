@@ -65,4 +65,36 @@ class PropertyMarshallerTest {
     // value present as null placeholder in map for MVP
     assertThat(r.values()).containsEntry("unk", null);
   }
+
+  @Test
+  void secretStructUnwrapsToInnerValue() {
+    Struct s = Struct.newBuilder()
+        .putFields("password", Value.newBuilder().setStructValue(
+            Struct.newBuilder()
+                .putFields("4dabf18193072939515e22adb298388d",
+                    Value.newBuilder().setStringValue("1b47061264138c4ac30d75fd1eb44270").build())
+                .putFields("value",
+                    Value.newBuilder().setStringValue("super-secret").build())
+                .build()).build())
+        .build();
+    Map<String, Object> m = PropertyMarshaller.structToMap(s);
+    assertThat(m).containsEntry("password", "super-secret");
+  }
+
+  @Test
+  void nonSecretMapWithSigKeyIsNotUnwrapped() {
+    // A regular nested map that happens to have a key matching SIG_KEY but with a
+    // different value should NOT be unwrapped.
+    Struct s = Struct.newBuilder()
+        .putFields("data", Value.newBuilder().setStructValue(
+            Struct.newBuilder()
+                .putFields("4dabf18193072939515e22adb298388d",
+                    Value.newBuilder().setStringValue("not-the-secret-sig").build())
+                .putFields("value",
+                    Value.newBuilder().setStringValue("nope").build())
+                .build()).build())
+        .build();
+    Map<String, Object> m = PropertyMarshaller.structToMap(s);
+    assertThat(m.get("data")).isInstanceOf(Map.class);
+  }
 }
