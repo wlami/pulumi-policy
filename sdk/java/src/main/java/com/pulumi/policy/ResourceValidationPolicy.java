@@ -18,13 +18,24 @@ public final class ResourceValidationPolicy {
     }
     this.name = b.name;
     this.description = b.description == null ? "" : b.description;
-    this.enforcementLevel = Objects.requireNonNullElse(b.enforcementLevel, EnforcementLevel.ADVISORY);
+    // null means "inherit from pack"; stored as-is so AnalyzerServer can apply the pack default.
+    this.enforcementLevel = b.enforcementLevel;
     this.validate = b.validate;
   }
 
   public String name() { return name; }
   public String description() { return description; }
-  public EnforcementLevel enforcementLevel() { return enforcementLevel; }
+  /** Returns this policy's enforcement level, defaulting to {@link EnforcementLevel#ADVISORY} if not set. */
+  public EnforcementLevel enforcementLevel() {
+    return enforcementLevel != null ? enforcementLevel : EnforcementLevel.ADVISORY;
+  }
+  /**
+   * Returns the effective enforcement level for this policy, falling back to {@code packDefault}
+   * when the policy does not have an explicit level set.
+   */
+  public EnforcementLevel effectiveEnforcementLevel(EnforcementLevel packDefault) {
+    return enforcementLevel != null ? enforcementLevel : packDefault;
+  }
   public BiConsumer<ResourceValidationArgs, ReportViolation> validate() { return validate; }
 
   public static Builder builder() { return new Builder(); }
