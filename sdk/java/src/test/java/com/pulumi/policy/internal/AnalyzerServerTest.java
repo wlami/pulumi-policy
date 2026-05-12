@@ -105,6 +105,8 @@ class AnalyzerServerTest {
     assertThat(resp.getDiagnostics(0).getMessage()).contains("cannot be public");
     assertThat(resp.getDiagnostics(0).getEnforcementLevel())
         .isEqualTo(pulumirpc.AnalyzerOuterClass.EnforcementLevel.MANDATORY);
+    assertThat(resp.getDiagnostics(0).getPolicyPackName()).isEqualTo("p");
+    assertThat(resp.getDiagnostics(0).getPolicyPackVersion()).isEqualTo("0.0.0");
   }
 
   @Test

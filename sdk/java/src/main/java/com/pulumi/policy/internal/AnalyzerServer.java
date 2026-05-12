@@ -81,14 +81,20 @@ public final class AnalyzerServer extends AnalyzerGrpc.AnalyzerImplBase {
         .props(props.values())
         .build();
 
+    PolicyRegistry.Entry registryEntry = PolicyRegistry.get();
+    PolicyPackArgs packArgs = registryEntry.args();
+    String packName = registryEntry.packName();
+    String packVersion = "0.0.0"; // MVP: matches GetAnalyzerInfo version
+
     List<AnalyzeDiagnostic> diagnostics = new ArrayList<>();
-    PolicyPackArgs packArgs = PolicyRegistry.get().args();
     for (ResourceValidationPolicy p : packArgs.policies()) {
       pulumirpc.AnalyzerOuterClass.EnforcementLevel effectiveLevel =
           p.enforcementLevel().toProto();
       List<AnalyzeDiagnostic> perPolicy = new ArrayList<>();
       ReportViolation report = (message, urn) -> perPolicy.add(AnalyzeDiagnostic.newBuilder()
           .setPolicyName(p.name())
+          .setPolicyPackName(packName)
+          .setPolicyPackVersion(packVersion)
           .setMessage(message)
           .setEnforcementLevel(effectiveLevel)
           .setUrn(urn == null ? req.getUrn() : urn)
@@ -102,6 +108,8 @@ public final class AnalyzerServer extends AnalyzerGrpc.AnalyzerImplBase {
         perPolicy.clear();
         perPolicy.add(AnalyzeDiagnostic.newBuilder()
             .setPolicyName(p.name())
+            .setPolicyPackName(packName)
+            .setPolicyPackVersion(packVersion)
             .setMessage("policy threw exception: " + stackTrace(e))
             .setEnforcementLevel(effectiveLevel)
             .setUrn(req.getUrn())
