@@ -96,6 +96,9 @@ public final class AnalyzerServer extends AnalyzerGrpc.AnalyzerImplBase {
       try {
         p.validate().accept(args, report);
       } catch (RuntimeException e) {
+        // Discard partial diagnostics from a throwing policy: a half-executed
+        // policy cannot be trusted, so replace any violations it reported
+        // before throwing with a single "threw exception" diagnostic.
         perPolicy.clear();
         perPolicy.add(AnalyzeDiagnostic.newBuilder()
             .setPolicyName(p.name())
