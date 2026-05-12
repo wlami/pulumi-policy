@@ -2,7 +2,7 @@ name: sdk-java
 
 on:
   push:
-    branches: [main, feature/java-policy-sdk-mvp]
+    branches: [main, feature/java-policy-sdk-mvp, feature/java-policy-sdk-value-wrappers]
     paths:
       - 'sdk/java/**'
       - '.github/workflows/sdk-java.yml'
