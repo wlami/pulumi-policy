@@ -38,4 +38,23 @@ class ResourceValidationArgsTest {
     assertThatThrownBy(() -> a.props().put("x", "y"))
         .isInstanceOf(UnsupportedOperationException.class);
   }
+
+  @Test
+  void containsUnknownsDefaultsToFalse() {
+    ResourceValidationArgs a = ResourceValidationArgs.builder()
+        .urn("u").type("t").name("n")
+        .props(java.util.Map.of("k", "v"))
+        .build();
+    assertThat(a.containsUnknowns()).isFalse();
+  }
+
+  @Test
+  void containsUnknownsHonoursBuilder() {
+    ResourceValidationArgs a = ResourceValidationArgs.builder()
+        .urn("u").type("t").name("n")
+        .props(java.util.Map.of("k", Unknown.INSTANCE))
+        .containsUnknowns(true)
+        .build();
+    assertThat(a.containsUnknowns()).isTrue();
+  }
 }
