@@ -20,14 +20,18 @@ public final class PolicyPack {
    * @param processArgs the args[] passed to your main() method - reserved for
    *                    future flag parsing; currently unused
    */
-  public static void run(String packName, PolicyPackArgs args, String[] processArgs)
-      throws IOException, InterruptedException {
+  public static void run(String packName, PolicyPackArgs args, String[] processArgs) {
     PolicyRegistry.register(packName, args);
 
-    Server server = ServerBuilder.forPort(0)
-        .addService(new AnalyzerServer())
-        .build()
-        .start();
+    Server server;
+    try {
+      server = ServerBuilder.forPort(0)
+          .addService(new AnalyzerServer())
+          .build()
+          .start();
+    } catch (IOException e) {
+      throw new RuntimeException("failed to start policy analyzer gRPC server: " + e.getMessage(), e);
+    }
 
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       try {
@@ -43,6 +47,11 @@ public final class PolicyPack {
     System.out.println(server.getPort());
     System.out.flush();
 
-    server.awaitTermination();
+    try {
+      server.awaitTermination();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      server.shutdownNow();
+    }
   }
 }

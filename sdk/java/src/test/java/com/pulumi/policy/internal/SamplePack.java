@@ -6,7 +6,7 @@ import com.pulumi.policy.PolicyPackArgs;
 import com.pulumi.policy.ResourceValidationPolicy;
 
 public class SamplePack {
-  public static void main(String[] args) throws Exception {
+  public static void main(String[] args) {
     PolicyPack.run("sample-pack",
         PolicyPackArgs.builder()
             .enforcementLevel(EnforcementLevel.MANDATORY)
