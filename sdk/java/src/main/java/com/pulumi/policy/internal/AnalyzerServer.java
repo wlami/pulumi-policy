@@ -79,6 +79,7 @@ public final class AnalyzerServer extends AnalyzerGrpc.AnalyzerImplBase {
         .type(req.getType())
         .name(req.getName())
         .props(props.values())
+        .containsUnknowns(props.containsUnknowns())
         .build();
 
     PolicyRegistry.Entry registryEntry = PolicyRegistry.get();

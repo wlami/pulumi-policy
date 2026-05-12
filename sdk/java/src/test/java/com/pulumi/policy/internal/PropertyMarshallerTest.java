@@ -53,48 +53,88 @@ class PropertyMarshallerTest {
   }
 
   @Test
-  void unknownSentinelFlagsContainsUnknowns() {
-    // Pulumi marshals computed/unknown values as the string sentinel
-    // "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
+  void unknownEmitsUnknownInstance() {
     Struct s = Struct.newBuilder()
         .putFields("unk", Value.newBuilder()
             .setStringValue("04da6b54-80e4-46f7-96ec-b56ff0331ba9").build())
         .build();
     PropertyMarshaller.Result r = PropertyMarshaller.structToMapWithFlags(s);
     assertThat(r.containsUnknowns()).isTrue();
-    // value present as null placeholder in map for MVP
-    assertThat(r.values()).containsEntry("unk", null);
+    assertThat(r.values().get("unk")).isSameAs(com.pulumi.policy.Unknown.INSTANCE);
   }
 
   @Test
-  void secretStructUnwrapsToInnerValue() {
+  void secretEmitsSecretWrapper() {
     Struct s = Struct.newBuilder()
         .putFields("password", Value.newBuilder().setStructValue(
             Struct.newBuilder()
                 .putFields("4dabf18193072939515e22adb298388d",
                     Value.newBuilder().setStringValue("1b47061264138c4ac30d75fd1eb44270").build())
                 .putFields("value",
-                    Value.newBuilder().setStringValue("super-secret").build())
+                    Value.newBuilder().setStringValue("hunter2").build())
                 .build()).build())
         .build();
     Map<String, Object> m = PropertyMarshaller.structToMap(s);
-    assertThat(m).containsEntry("password", "super-secret");
+    assertThat(m.get("password")).isInstanceOf(com.pulumi.policy.Secret.class);
+    assertThat(((com.pulumi.policy.Secret<?>) m.get("password")).value()).isEqualTo("hunter2");
   }
 
   @Test
-  void nonSecretMapWithSigKeyIsNotUnwrapped() {
-    // A regular nested map that happens to have a key matching SIG_KEY but with a
-    // different value should NOT be unwrapped.
+  void textAssetEmitsAssetWrapper() {
     Struct s = Struct.newBuilder()
-        .putFields("data", Value.newBuilder().setStructValue(
+        .putFields("body", Value.newBuilder().setStructValue(
             Struct.newBuilder()
                 .putFields("4dabf18193072939515e22adb298388d",
-                    Value.newBuilder().setStringValue("not-the-secret-sig").build())
-                .putFields("value",
-                    Value.newBuilder().setStringValue("nope").build())
+                    Value.newBuilder().setStringValue("c44067f5952c0a294b673a41bacd8c17").build())
+                .putFields("text",
+                    Value.newBuilder().setStringValue("hello").build())
+                .putFields("hash",
+                    Value.newBuilder().setStringValue("sha256:abc").build())
                 .build()).build())
         .build();
     Map<String, Object> m = PropertyMarshaller.structToMap(s);
-    assertThat(m.get("data")).isInstanceOf(Map.class);
+    com.pulumi.policy.Asset a = (com.pulumi.policy.Asset) m.get("body");
+    assertThat(a.kind()).isEqualTo(com.pulumi.policy.Asset.Kind.TEXT);
+    assertThat(a.text()).isEqualTo("hello");
+    assertThat(a.hash()).isEqualTo("sha256:abc");
+  }
+
+  @Test
+  void pathArchiveEmitsArchiveWrapper() {
+    Struct s = Struct.newBuilder()
+        .putFields("z", Value.newBuilder().setStructValue(
+            Struct.newBuilder()
+                .putFields("4dabf18193072939515e22adb298388d",
+                    Value.newBuilder().setStringValue("0def7320c3a5731c473e5ecbe6d01bc7").build())
+                .putFields("path",
+                    Value.newBuilder().setStringValue("/tmp/x.tar.gz").build())
+                .build()).build())
+        .build();
+    Map<String, Object> m = PropertyMarshaller.structToMap(s);
+    com.pulumi.policy.Archive a = (com.pulumi.policy.Archive) m.get("z");
+    assertThat(a.kind()).isEqualTo(com.pulumi.policy.Archive.Kind.PATH);
+    assertThat(a.path()).isEqualTo("/tmp/x.tar.gz");
+  }
+
+  @Test
+  void resourceReferenceEmitsRefWrapper() {
+    Struct s = Struct.newBuilder()
+        .putFields("ref", Value.newBuilder().setStructValue(
+            Struct.newBuilder()
+                .putFields("4dabf18193072939515e22adb298388d",
+                    Value.newBuilder().setStringValue("5cf8f73096256a8f31e491e813e4eb8e").build())
+                .putFields("urn",
+                    Value.newBuilder().setStringValue("urn:pulumi:dev::p::aws:s3/bucket:Bucket::b").build())
+                .putFields("id",
+                    Value.newBuilder().setStringValue("bucket-abc").build())
+                .putFields("packageVersion",
+                    Value.newBuilder().setStringValue("5.0.0").build())
+                .build()).build())
+        .build();
+    Map<String, Object> m = PropertyMarshaller.structToMap(s);
+    com.pulumi.policy.ResourceReference r = (com.pulumi.policy.ResourceReference) m.get("ref");
+    assertThat(r.urn()).isEqualTo("urn:pulumi:dev::p::aws:s3/bucket:Bucket::b");
+    assertThat(r.id()).isEqualTo("bucket-abc");
+    assertThat(r.packageVersion()).isEqualTo("5.0.0");
   }
 }
