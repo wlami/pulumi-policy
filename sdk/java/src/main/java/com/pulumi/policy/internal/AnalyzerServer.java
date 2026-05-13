@@ -45,6 +45,10 @@ public final class AnalyzerServer extends AnalyzerGrpc.AnalyzerImplBase {
           .setName(p.name())
           .setDescription(p.description())
           .setEnforcementLevel(p.enforcementLevel().toProto())
+          // Tell the engine this is a resource-validation policy so it routes
+          // requests correctly. Without this the policy defaults to
+          // POLICY_TYPE_UNKNOWN and the engine may mis-handle Remediate calls.
+          .setPolicyType(pulumirpc.AnalyzerOuterClass.PolicyType.POLICY_TYPE_RESOURCE)
           .build());
     }
     obs.onNext(info.build());
@@ -119,6 +123,19 @@ public final class AnalyzerServer extends AnalyzerGrpc.AnalyzerImplBase {
       diagnostics.addAll(perPolicy);
     }
     obs.onNext(AnalyzeResponse.newBuilder().addAllDiagnostics(diagnostics).build());
+    obs.onCompleted();
+  }
+
+  @Override
+  public void remediate(pulumirpc.AnalyzerOuterClass.AnalyzeRequest req,
+                        StreamObserver<pulumirpc.AnalyzerOuterClass.RemediateResponse> obs) {
+    // MVP: no ResourceRemediationPolicy support yet. The Plan A SDK only
+    // supports ResourceValidationPolicy, which never rewrites resource
+    // properties. Always return an empty response so the engine doesn't
+    // fall back to UNIMPLEMENTED handling (which can race with provider-
+    // resource lifecycle and surface as "connection refused" on slow
+    // providers).
+    obs.onNext(pulumirpc.AnalyzerOuterClass.RemediateResponse.getDefaultInstance());
     obs.onCompleted();
   }
 
