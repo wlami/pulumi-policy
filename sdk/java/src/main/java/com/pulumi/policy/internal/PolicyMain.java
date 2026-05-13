@@ -14,6 +14,17 @@ public final class PolicyMain {
   private PolicyMain() {}
 
   public static void main(String[] args) {
+    // Disable Netty's use of sun.misc.Unsafe. grpc-netty-shaded's bundled
+    // Netty would otherwise call Unsafe.objectFieldOffset during static
+    // initialization, which JDK 23+ flags with a "terminally deprecated"
+    // warning. Setting this property before any io.netty.* class loads
+    // (PolicyMain runs before the user entrypoint and before
+    // com.pulumi.policy.PolicyPack#run pulls in ServerBuilder) makes Netty
+    // skip the Unsafe-based code paths entirely.
+    if (System.getProperty("io.netty.noUnsafe") == null) {
+      System.setProperty("io.netty.noUnsafe", "true");
+    }
+
     if (args.length < 1) {
       System.err.println("usage: PolicyMain <fully.qualified.EntrypointClass> [args...]");
       System.exit(ACTIONABLE_EXIT);
